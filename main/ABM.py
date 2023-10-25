@@ -2,6 +2,7 @@ import mysql.connector
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
+import Funciones as f
 
 #conexion = mysql.connector.connect(host="localhost", user="root", password="", database="lomiteria")
 
@@ -57,7 +58,7 @@ password_input.grid(row=4,column=0,pady=(0, 30), columnspan=2, padx=(50,50))
 
 usuario_select['values'] = ('Guillermo', 'Agostina', 'Franco', 'Lucas')
 
-ingreso_button = tk.Button(frame, text="INGRESAR", relief="flat", font=("Consolas", 14, "bold"), background=amarillo)
+ingreso_button = tk.Button(frame, text="INGRESAR", relief="flat", font=("Consolas", 14, "bold"), background=amarillo, command=lambda:f.create_window(root, 0))
 ingreso_button.grid(row=5,column=0, pady=(0,20), columnspan=2)
 
 
