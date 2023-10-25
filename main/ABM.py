@@ -3,17 +3,66 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 
-conexion = mysql.connector.connect(host="localhost", user="root", password="", database="lomiteria")
+#conexion = mysql.connector.connect(host="localhost", user="root", password="", database="lomiteria")
 
 root = tk.Tk()
 root.title("Sistema de gestion")
-root.resizable(0,0)
+root.resizable(0, 0)
 
 amarillo = "#e6a902"
 rojo = "#e60707"
 blanco = "#fcebeb"
+verde = "#4ab56e"
 
-root.config(bg="")
+empresa = "Lomitos X2"
+title_font = ("Gill Sans MT", 20)
+
+root.state('zoomed')
+
+root.config(bg=blanco)
+
+style = ttk.Style()
+
+style.configure("TFrame", background=verde, width=400, height=600)
+
+root.grid_columnconfigure(0, weight=1)  # Configura la columna 0 para que ocupe todo el espacio disponible
+
+title1 = tk.Label(root, text="Bienvenido al sistema de gestion HADLER", font=title_font, bg=blanco)
+title1.grid(row=0, column=0, sticky="ew", pady=(30,80))
+
+frame = tk.Frame(root, bg=verde, borderwidth=3, relief="solid")
+frame.grid(row=2, column=0)
+
+frame.grid_rowconfigure(0, weight=1)
+frame.grid_columnconfigure(0, weight=1)
+
+title2 = tk.Label(frame, text=empresa, font= ("Gill Sans MT", 20, "bold"), bg=verde)
+title2.grid(row=0,column=0, sticky="ew", pady=(20,0), columnspan=2)
+
+usuario_label = tk.Label(frame, text="Usuario", font=("Gill Sans MT", 16), bg=verde)
+usuario_label.grid(row=1,column=0, pady=(20,10), columnspan=2)
+
+usuario_select = ttk.Combobox(frame, font=("Gill Sans MT", 16), state="readonly")
+usuario_select.grid(row=2,column=0, pady=(0,30), padx=(50,0))
+
+add_usuario = tk.Button(frame, text="+", font=("Gill Sans MT", 11, "bold"), relief="flat")
+add_usuario.grid(row=2,column=1,sticky="NW", ipadx=5, padx=(10,50))
+
+password_label = tk.Label(frame, text="Contraseña", font=("Gill Sans MT", 16), bg=verde)
+password_label.grid(row=3, column=0, pady=(0, 10), columnspan=2)
+
+password_input = tk.Entry(frame, font=("Arial", 18), show="*", width=22)
+password_input.grid(row=4,column=0,pady=(0, 30), columnspan=2, padx=(50,50))
+
+
+usuario_select['values'] = ('Guillermo', 'Agostina', 'Franco', 'Lucas')
+
+ingreso_button = tk.Button(frame, text="INGRESAR", relief="flat", font=("Consolas", 14, "bold"), background=amarillo)
+ingreso_button.grid(row=5,column=0, pady=(0,20), columnspan=2)
+
+
+root.mainloop()
+
 
 """
 SQL
