@@ -8,7 +8,6 @@ import Funciones as f
 
 root = tk.Tk()
 root.title("Sistema de gestion")
-root.resizable(0, 0)
 
 amarillo = "#e6a902"
 rojo = "#e60707"
@@ -58,7 +57,7 @@ password_input.grid(row=4,column=0,pady=(0, 30), columnspan=2, padx=(50,50))
 
 usuario_select['values'] = ('Guillermo', 'Agostina', 'Franco', 'Lucas')
 
-ingreso_button = tk.Button(frame, text="INGRESAR", relief="flat", font=("Consolas", 14, "bold"), background=amarillo, command=lambda:f.create_window(root, 0))
+ingreso_button = tk.Button(frame, text="INGRESAR", relief="flat", font=("Consolas", 14, "bold"), background=amarillo, command=lambda:f.ingresar(root))
 ingreso_button.grid(row=5,column=0, pady=(0,20), columnspan=2)
 
 
