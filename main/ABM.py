@@ -54,10 +54,9 @@ password_label.grid(row=3, column=0, pady=(0, 10), columnspan=2)
 password_input = tk.Entry(frame, font=("Arial", 18), show="*", width=22)
 password_input.grid(row=4,column=0,pady=(0, 30), columnspan=2, padx=(50,50))
 
-
 usuario_select['values'] = ('Guillermo', 'Agostina', 'Franco', 'Lucas')
 
-ingreso_button = tk.Button(frame, text="INGRESAR", relief="flat", font=("Consolas", 14, "bold"), background=amarillo, command=lambda:f.ingresar(root))
+ingreso_button = tk.Button(frame, text="INGRESAR", cursor="hand2", relief="flat", font=("Consolas", 14, "bold"), background=amarillo, command=lambda:f.ingresar(root))
 ingreso_button.grid(row=5,column=0, pady=(0,20), columnspan=2)
 
 
