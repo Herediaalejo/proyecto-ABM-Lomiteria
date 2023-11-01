@@ -80,8 +80,6 @@ def agregar_producto(nombre_producto):
     
     actualizar_lista_productos()
 
-
-
 # Función para manejar la selección del botón
 def seleccionar_entrada(button, seleccion):
     global entrada_seleccionada
