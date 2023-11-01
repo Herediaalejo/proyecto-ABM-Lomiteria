@@ -23,7 +23,7 @@ def cargar_productos():
     conexion = mysql.connector.connect(
         host="localhost",
         user="root",
-        password="",
+        password="estudiantes2020",
         database="Lomiteria"  # Nombre de tu base de datos
     )
 
@@ -67,18 +67,30 @@ def actualizar_lista_productos():
         productos_seleccionados_listbox.insert(tk.END, producto)
 
 def agregar_producto(nombre_producto):
-    # Verificar si el producto ya está en la lista
-    for i, producto in enumerate(productos_seleccionados):
-        if producto.startswith(nombre_producto):
+    if nombre_producto in productos_seleccionados:
+        # Si el producto ya está en la lista, verifica si tiene precio x2
+        for i, producto in enumerate(productos_seleccionados):
             if producto == nombre_producto:
-                productos_seleccionados[i] = f"{nombre_producto} x2"
-            else:
-                productos_seleccionados.insert(i + 1, nombre_producto)
-            break
+                precio_x1, precio_x2 = productos_precios.get(nombre_producto, (0.0, 0.0))
+                cantidad = int(producto.split(" x")[1]) if " x" in producto else 1
+                if cantidad < 2 and precio_x2:
+                    productos_seleccionados[i] = f"{nombre_producto} x2"
+                else:
+                    if cantidad == 1 and precio_x2 == "":
+                        productos_seleccionados.append(nombre_producto)
+                break
     else:
-        productos_seleccionados.append(nombre_producto)
-    
+        # Si el producto no está en la lista, verifica si tiene precio x2
+        precio_x1, precio_x2 = productos_precios.get(nombre_producto, (0.0, 0.0))
+        if precio_x1:
+            productos_seleccionados.append(nombre_producto)
+        elif precio_x2:
+            productos_seleccionados.append(f"{nombre_producto} x2")
+        else:
+            productos_seleccionados.append(nombre_producto)  # Agregarlo sin "x2"
+
     actualizar_lista_productos()
+
 
 # Función para manejar la selección del botón
 def seleccionar_entrada(button, seleccion):
@@ -146,19 +158,19 @@ def menu_pedido(ventana):
     entrada_frame.grid_columnconfigure(3, weight=1)
     entrada_frame.grid_columnconfigure(4, weight=1)
 
-    barra_b = tk.Button(entrada_frame, cursor="hand2", text="Local", width=10, font=("Gill Sans MT", 20), relief="solid", borderwidth=2, command=lambda:seleccionar_entrada(barra_b,"lc"))
+    barra_b = tk.Button(entrada_frame, cursor="hand2", text="Local", width=10, font=("Gill Sans MT", 20), relief="solid", borderwidth=2, command=lambda:seleccionar_entrada(barra_b,"Local"))
     barra_b.grid(column=0,row=0)
 
-    telefono_b = tk.Button(entrada_frame, cursor="hand2", text="Telefono", width=10, font=("Gill Sans MT", 20), relief="solid", borderwidth=2, command=lambda:seleccionar_entrada(telefono_b,"tel"))
+    telefono_b = tk.Button(entrada_frame, cursor="hand2", text="Telefono", width=10, font=("Gill Sans MT", 20), relief="solid", borderwidth=2, command=lambda:seleccionar_entrada(telefono_b,"Teléfono"))
     telefono_b.grid(column=1,row=0)
 
-    whatsapp_b = tk.Button(entrada_frame, cursor="hand2", text="Whatsapp", width=10, font=("Gill Sans MT", 20), relief="solid", borderwidth=2, command=lambda:seleccionar_entrada(whatsapp_b,"wp"))
+    whatsapp_b = tk.Button(entrada_frame, cursor="hand2", text="Whatsapp", width=10, font=("Gill Sans MT", 20), relief="solid", borderwidth=2, command=lambda:seleccionar_entrada(whatsapp_b,"Whatsapp"))
     whatsapp_b.grid(column=2,row=0)
 
-    rappi_b = tk.Button(entrada_frame, cursor="hand2", text="Rappi", width=10, font=("Gill Sans MT", 20), relief="solid", borderwidth=2, command=lambda:seleccionar_entrada(rappi_b,"rp"))
+    rappi_b = tk.Button(entrada_frame, cursor="hand2", text="Rappi", width=10, font=("Gill Sans MT", 20), relief="solid", borderwidth=2, command=lambda:seleccionar_entrada(rappi_b,"Rappi"))
     rappi_b.grid(column=3,row=0)
     
-    pedidosya_b = tk.Button(entrada_frame, cursor="hand2", text="Pedidos ya", width=10, font=("Gill Sans MT", 20), borderwidth=2, relief="solid", command=lambda:seleccionar_entrada(pedidosya_b,"py"))
+    pedidosya_b = tk.Button(entrada_frame, cursor="hand2", text="Pedidos ya", width=10, font=("Gill Sans MT", 20), borderwidth=2, relief="solid", command=lambda:seleccionar_entrada(pedidosya_b,"Pedidos ya"))
     pedidosya_b.grid(column=4,row=0)
 
     botones_entrada = [barra_b,telefono_b,whatsapp_b,rappi_b,pedidosya_b]
@@ -176,10 +188,10 @@ def menu_pedido(ventana):
     entrega_frame.grid_columnconfigure(3, weight=1)
     entrega_frame.grid_columnconfigure(4, weight=1)
 
-    local_button = tk.Button(entrega_frame, cursor="hand2", width=10, text="Local", borderwidth=2, font=("Gill Sans MT", 20), relief="solid", command=lambda:seleccionar_entrega(local_button,"lc"))
+    local_button = tk.Button(entrega_frame, cursor="hand2", width=10, text="Local", borderwidth=2, font=("Gill Sans MT", 20), relief="solid", command=lambda:seleccionar_entrega(local_button,"Retira"))
     local_button.grid(column=1,row=0, columnspan=2)
 
-    delivery_button = tk.Button(entrega_frame, cursor="hand2", width=10, text="Delivery", borderwidth=2, font=("Gill Sans MT", 20), relief="solid", command=lambda:seleccionar_entrega(delivery_button,"dl"))
+    delivery_button = tk.Button(entrega_frame, cursor="hand2", width=10, text="Delivery", borderwidth=2, font=("Gill Sans MT", 20), relief="solid", command=lambda:seleccionar_entrega(delivery_button,"Delivery"))
     delivery_button.grid(column=2,row=0, columnspan=2)
 
     botones_entrega = [local_button, delivery_button]
@@ -191,14 +203,14 @@ def menu_pedido(ventana):
     continuar_button.grid(column=4,row=4, ipady=20)
 
 def menu_pedido2(ventana):
-    global productos_seleccionados_listbox
+    global productos_seleccionados_listbox, productos_precios
 
     def mostrar_campos_local():
         if modo_consumo_combo.get() == "Fuera del local" or tipo_entrada_combo.get() != "Local":
-            nombre_cliente_label.grid(row=3, column=0, sticky="e", padx=(10, 5), pady=(10, 0))
-            nombre_cliente_entry.grid(row=3, column=1, sticky="w", padx=(5, 10), pady=(10, 0))
-            modo_entrega_label.grid(row=2, column=0, sticky="e", padx=(10, 5), pady=(10, 0))
-            modo_entrega_combo.grid(row=2, column=1, sticky="w", padx=(5, 10), pady=(10, 0))
+            nombre_cliente_label.grid(row=4, column=0, sticky="e", padx=(10, 5), pady=(10, 0))
+            nombre_cliente_entry.grid(row=4, column=1, sticky="w", padx=(5, 10), pady=(10, 0))
+            modo_entrega_label.grid(row=3, column=0, sticky="e", padx=(10, 5), pady=(10, 0))
+            modo_entrega_combo.grid(row=3, column=1, sticky="w", padx=(5, 10), pady=(10, 0))
         else:
             nombre_cliente_label.grid_remove()
             nombre_cliente_entry.grid_remove()
@@ -211,60 +223,60 @@ def menu_pedido2(ventana):
             direccion_entry.grid_remove()
 
         if modo_entrega_combo.get() == "Delivery":
-            telefono_label.grid(row=4, column=0, sticky="e", padx=(10, 5), pady=(10, 0))
-            telefono_entry.grid(row=4, column=1, sticky="w", padx=(5, 10))
-            direccion_label.grid(row=5, column=0, sticky="e", padx=(10, 5), pady=(10, 0))
-            direccion_entry.grid(row=5, column=1, sticky="w", padx=(5, 10))
+            telefono_label.grid(row=5, column=0, sticky="e", padx=(10, 5), pady=(10, 0))
+            telefono_entry.grid(row=5, column=1, sticky="w", padx=(5, 10))
+            direccion_label.grid(row=6, column=0, sticky="e", padx=(10, 5), pady=(10, 0))
+            direccion_entry.grid(row=6, column=1, sticky="w", padx=(5, 10))
         else:
             telefono_label.grid_remove()
             telefono_entry.grid_remove()
             direccion_label.grid_remove()
             direccion_entry.grid_remove()
+
         if tipo_entrada_combo.get() != "Local":
             modo_consumo_combo.set("Fuera del local")
 
-        
-        
-
-
+        if tipo_entrada_combo.get() == "Local":
+            modo_consumo_combo.set("Mesa")
+ 
     eliminar_widgets(ventana)
     for row in range(10):
         for column in range(5):
-            crear_celda(ventana, row, column, all_columns=5 , color="green", padx=(10,10), pady=(20,10), sticky="ns")
+            crear_celda(ventana, row, column, all_columns=5 , color=blanco, padx=(10,10), pady=(20,10), sticky="ns")
             ventana.rowconfigure(row, weight=1)  # Expande la fila 
             ventana.columnconfigure(column, weight=1)  # Expande la columna 
 
     form = tk.Frame(ventana, relief="solid", bg=blanco, borderwidth=3)
     form.grid(row=0,column=2,sticky="nsew", columnspan=3, rowspan=10, padx=(150,20), pady=20)
 
-    for row in range(6):
-        for column in range(2):
-            crear_celda(form, row, column, all_columns=5 , color=blanco, padx=(10,10), pady=(20,10), sticky="ns", op=1, width=300)
+    for row in range(12):
+        for column in range(3):
+            crear_celda(form, row, column, all_columns=3 , color=blanco, padx=(10,10), pady=(20,10), sticky="ns", op=1, width=260)
             ventana.rowconfigure(row, weight=1)  # Expande la fila 
             ventana.columnconfigure(column, weight=1)  # Expande la columna 
+
 
     form_title = tk.Label(form, bg=blanco, text="Pedido", font=("Gill Sans MT", 24))
     form_title.grid(row=0,column=0, sticky="w")
 
     tipo_entrada_label = tk.Label(form, bg=blanco, text="Tipo de entrada:", font=("Gill Sans MT", 16))
-    tipo_entrada_label.grid(row=0, column=0, sticky="e", padx=(10, 5), pady=(10, 0))
+    tipo_entrada_label.grid(row=1, column=0, sticky="e", padx=(10, 5), pady=(10, 0))
 
-    tipo_entrada_values = ["Local", "Telefono", "Whatsapp", "Pedidos Ya", "Rappi"]
+    tipo_entrada_values = ["Local", "Teléfono", "Whatsapp", "Pedidos Ya", "Rappi"]
     tipo_entrada_combo = ttk.Combobox(form, values=tipo_entrada_values, font=("Gill Sans MT", 16))
-    tipo_entrada_combo.grid(row=0, column=1, sticky="w", padx=(5, 10), pady=(10, 0))
+    tipo_entrada_combo.grid(row=1, column=1, sticky="w", padx=(5, 10), pady=(10, 0))
     tipo_entrada_combo.set(tipo_entrada_values[0])  # Establecer un valor predeterminado
 
     tipo_entrada_combo.bind("<<ComboboxSelected>>", lambda event: mostrar_campos_local())
 
     modo_consumo_label = tk.Label(form, bg=blanco, text="Modo de consumo:", font=("Gill Sans MT", 16))
-    modo_consumo_label.grid(row=1, column=0, sticky="e", padx=(10, 5), pady=(10, 0))
+    modo_consumo_label.grid(row=2, column=0, sticky="e", padx=(10, 5), pady=(10, 0))
 
     # Usar un ComboBox (ttk.Combobox) para el modo de consumo
     modo_consumo_values = ["Mesa", "Fuera del local"]
     modo_consumo_combo = ttk.Combobox(form, values=modo_consumo_values, font=("Gill Sans MT", 16))
-    modo_consumo_combo.grid(row=1, column=1, sticky="w", padx=(5, 10), pady=(10, 0))
+    modo_consumo_combo.grid(row=2, column=1, sticky="w", padx=(5, 10), pady=(10, 0))
     modo_consumo_combo.set(modo_consumo_values[0])  # Establecer un valor predeterminado
-
 
     modo_consumo_combo.bind("<<ComboboxSelected>>", lambda event: mostrar_campos_local())
 
@@ -274,8 +286,10 @@ def menu_pedido2(ventana):
     modo_entrega_values = ["Delivery", "Retira"]
     modo_entrega_combo = ttk.Combobox(form, values=modo_entrega_values, font=("Gill Sans MT", 16))
 
-
     modo_entrega_combo.bind("<<ComboboxSelected>>", lambda event: mostrar_campos_local())
+
+    modo_entrega_combo.set(entrega_seleccionada)  # Establece el valor predeterminado (cambia [0] si es otro valor)
+    tipo_entrada_combo.set(entrada_seleccionada)  # Establece el valor predeterminado (cambia [1] si es otro valor)
 
     # Resto de los campos de entrada
     nombre_cliente_label = tk.Label(form, bg=blanco, text="Nombre del cliente:", font=("Gill Sans MT", 16))
@@ -289,42 +303,61 @@ def menu_pedido2(ventana):
     direccion_entry = tk.Entry(form, font=("Gill Sans MT", 16), width=22)
 
     producto_label = tk.Label(form, bg=blanco, text="Producto/s:", font=("Gill Sans MT", 16))
-    producto_label.grid(row=6, column=0, sticky="e", padx=(10, 5), pady=(10, 0))
+    producto_label.grid(row=7, column=0, sticky="e", padx=(10, 5), pady=(10, 0))
 
     productos_seleccionados_listbox = tk.Listbox(form, height=5, width=35, font=("Gill Sans MT", 14))
-    productos_seleccionados_listbox.grid(row=6, column=1, sticky="w", padx=(5, 0))
+    productos_seleccionados_listbox.grid(row=7, column=1, sticky="w", padx=(5, 0))
 
     # Agrega un botón para limpiar la Listbox
-    limpiar_button = tk.Button(form, text="Limpiar", cursor="hand2", font=("Gill Sans MT", 12), command=lambda: [productos_seleccionados.clear(), actualizar_lista_productos()])
-    limpiar_button.grid(row=7, column=1, sticky="w", padx=(5, 0), pady=10)
+    limpiar_button = tk.Button(form, text="Limpiar", cursor="hand2", font=("Gill Sans MT", 12), command=lambda: [productos_seleccionados.clear(), actualizar_lista_productos(), total_label.config(text="Total: $0.00")])
+    limpiar_button.grid(row=8, column=1, sticky="w", padx=(5, 0), pady=10)
 
     descripcion_label = tk.Label(form, bg=blanco, text="Descripción:", font=("Gill Sans MT", 16))
-    descripcion_label.grid(row=8, column=0, sticky="e", padx=(10, 5), pady=(10, 0))
+    descripcion_label.grid(row=9, column=0, sticky="e", padx=(10, 5), pady=(10, 0))
 
     descripcion_text = tk.Text(form, font=("Gill Sans MT", 16), width=35, height=3)
-    descripcion_text.grid(row=8, column=1, sticky="w", padx=(5, 10), pady=(10, 0))
+    descripcion_text.grid(row=9, column=1, sticky="w", padx=(5, 10), pady=(10, 0))
 
     medio_pago_label = tk.Label(form, bg=blanco, text="Medio de pago:", font=("Gill Sans MT", 16))
-    medio_pago_label.grid(row=9, column=0, sticky="e", padx=(10, 5), pady=(10, 0))
+    medio_pago_label.grid(row=10, column=0, sticky="e", padx=(10, 5), pady=(10, 0))
 
     # Usar un ComboBox (ttk.Combobox) para el medio de pago
     medio_pago_values = ["Efectivo", "Tarjeta de crédito", "Tarjeta de débito"]
     medio_pago_combo = ttk.Combobox(form, values=medio_pago_values, font=("Gill Sans MT", 16))
-    medio_pago_combo.grid(row=9, column=1, sticky="w", padx=(5, 10), pady=(10, 0))
+    medio_pago_combo.grid(row=10, column=1, sticky="w", padx=(5, 10), pady=(10, 0))
     medio_pago_combo.set(medio_pago_values[0])  # Establecer un valor predeterminado
+
+    def guardar_datos():
+        # Lógica para guardar los datos del formulario
+        pass
+
+    def imprimir_datos():
+        # Lógica para imprimir los datos del formulario
+        pass
+
+    # Botón "Guardar"
+    guardar_button = tk.Button(form, text="Guardar", bg="#a5e872", cursor="hand2", font=("Gill Sans MT", 20), command=guardar_datos)
+    guardar_button.grid(row=12, column=1, sticky="e", padx=(10, 5), pady=10)
+
+    # Botón "Imprimir"
+    imprimir_button = tk.Button(form, text="Imprimir", bg="#a1c2f7", cursor="hand2", font=("Gill Sans MT", 20), command=imprimir_datos)
+    imprimir_button.grid(row=12, column=2, padx=(5, 10), pady=10)
+
+# ... (tu código existente)
+
 
     mostrar_campos_local()
 
-    regresar_button = tk.Button(ventana, cursor="hand2", width=10, text="Regresar", bg="#e87e72", borderwidth=2, font=("Gill Sans MT", 20), relief="solid", command=lambda:[ventana.destroy(),create_window(0)])
-    regresar_button.grid(column=0,row=9, ipady=20)
+    regresar_button = tk.Button(ventana, cursor="hand2", width=10, text="Regresar", bg="#e87e72", borderwidth=2, font=("Gill Sans MT", 20), relief="solid", command=lambda:[productos_seleccionados.clear(), ventana.destroy(),create_window(0)])
+    regresar_button.grid(column=0,row=9)
 
     # Crear un Canvas como contenedor
     canvas = tk.Canvas(ventana)
-    canvas.grid(row=0,column=0,sticky="nsew", columnspan=3, rowspan=8, padx=(20,230), pady=(20,0))
+    canvas.grid(row=0,column=0,sticky="nsew", columnspan=3, rowspan=8, padx=(20,300), pady=(20,0))
 
     # Crear un Scrollbar a la derecha del Canvas
     scrollbar = tk.Scrollbar(ventana, command=canvas.yview)
-    scrollbar.grid(row=0, column=2, sticky="nse", rowspan=8, pady=(20,0), padx=(0,230))  # Ajuste la columna para colocarlo a la derecha
+    scrollbar.grid(row=0, column=2, sticky="nse", rowspan=8, pady=(20,0), padx=(0,300))  # Ajuste la columna para colocarlo a la derecha
     canvas.configure(yscrollcommand=scrollbar.set)
     
 
@@ -345,7 +378,7 @@ def menu_pedido2(ventana):
     preciox1_title.grid(row=0,column=2, padx=(20,0), pady=10)
     
     preciox2_title = tk.Label(productos_frame, text="x2", font=("Gill Sans MT", 20), bg=blanco)
-    preciox2_title.grid(row=0,column=3, padx=35, pady=10)
+    preciox2_title.grid(row=0,column=3, padx=(150,150), pady=10)
 
 
     # Configurar el evento de desplazamiento
@@ -369,12 +402,12 @@ def menu_pedido2(ventana):
         precio_x1_label.grid(row=i+1, column=2, sticky="w", padx=(20,0), pady=(0,10))
 
         precio_x2_label = tk.Label(productos_frame, text=f"${precio_x2}", bg="#e87e72", font=("Gill Sans MT", 16))
-        precio_x2_label.grid(row=i+1, column=3, sticky="w", padx=35, pady=(0,10))
+        precio_x2_label.grid(row=i+1, column=3, sticky="w", padx=(150,150), pady=(0,10))
 
         if precio_x2 == "":
-            precio_x2_label.config(text="")
+            precio_x2_label.config(text="") 
         
-        agregar_button = tk.Button(productos_frame, text="+", font=("Gill Sans MT", 12, "bold"), relief="flat", cursor="hand2", command=lambda nombre=nombre: agregar_producto(nombre))
+        agregar_button = tk.Button(productos_frame, text="+", font=("Gill Sans MT", 12, "bold"), relief="flat", cursor="hand2", command=lambda nombre=nombre: [agregar_producto(nombre), calcular_precio_total()])
         agregar_button.grid(row=i+1, column=0, sticky="e", padx=(30,0), pady=(0,10))
     
     # Actualiza el tamaño del canvas después de agregar elementos al frame
@@ -394,11 +427,31 @@ def menu_pedido2(ventana):
     total_label = tk.Label(total_frame, text="Total: $0.00", font=("Gill Sans MT", 30))
     total_label.grid(row=0,column=0)
 
-    # Función para actualizar el total
-    def actualizar_total():
-        # Calcula el total (puedes personalizar esto según tus necesidades)
-        total = 0.00  # Debes calcular el total real en función de los productos y cantidades seleccionados
-        total_label.config(text=f"Total: ${total:.2f}")
+    # Obtén la lista de productos con sus precios desde la función cargar_productos
+    productos_con_precios = cargar_productos()
+
+    # Crea un diccionario que asocie los nombres de los productos con sus precios
+    productos_precios = {nombre: (precio_x1, precio_x2) for nombre, precio_x1, precio_x2 in productos_con_precios}
+
+    # ... (tu código existente)
+
+    # Función para calcular el precio total
+    def calcular_precio_total():
+        precio_total = 0.0  # Inicializa como float
+        for producto in productos_seleccionados_listbox.get(0, tk.END):
+            nombre_producto = producto.split(" x")[0]  # Elimina " x2" si está presente
+            precio_x1, precio_x2 = productos_precios.get(nombre_producto, (0.0, 0.0))  # Inicializa como float
+            cantidad = int(producto.split(" x")[1]) if " x" in producto else 1
+
+            # Acumula el precio en cada iteración teniendo en cuenta la cantidad y si tiene precio x2
+            if cantidad == 2 and precio_x2:
+                precio_total += float(precio_x2)
+            else:
+                precio_total += float(precio_x1)
+
+        # Actualiza la etiqueta total_label con el precio total
+        total_label.config(text=f"Total: ${precio_total:.2f}")
+
 
 
 def create_window(op):
@@ -522,7 +575,7 @@ def create_window(op):
             segundos = int(segundos_transcurridos % 60)
             return f"{minutos:02d}:{segundos:02d}"
 
-        def actualizar_tiempo():
+        """def actualizar_tiempo():
             tiempo_actual = tiempo_transcurrido(inicio_tiempo)
 
             # Actualiza el tiempo para cada pedido en la lista de pedidos
@@ -532,7 +585,7 @@ def create_window(op):
             principal.after(1000, actualizar_tiempo)
 
         # Asegúrate de llamar a esta función después de agregar el primer pedido
-        actualizar_tiempo()
+        actualizar_tiempo()"""
 
 
 

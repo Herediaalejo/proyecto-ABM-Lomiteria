@@ -130,7 +130,11 @@ Cantidad int not null,
 
 Monto int not null, 
 
-Modo de consumo varchar (150), 
+Modo de consumo varchar (150),
+
+Modo de entrada varchar (150),
+
+Modo de entrega varchar (150),
 
 Primary key (Codpedido)); 
 
