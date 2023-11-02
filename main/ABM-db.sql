@@ -65,10 +65,18 @@ CREATE TABLE IF NOT EXISTS Pedido (
     direccion VARCHAR(255),
     medio_pago VARCHAR(255),
     entregado BOOLEAN DEFAULT 0,
+    cancelado BOOLEAN DEFAULT 0,
     fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,  -- Agregar la columna fecha_registro
     FOREIGN KEY (id_modo_consumo) REFERENCES ModoConsumo(id_modo_consumo),
     FOREIGN KEY (id_tipo_entrada) REFERENCES TipoEntrada(id_tipo_entrada),
     FOREIGN KEY (id_tipo_entrega) REFERENCES TipoEntrega(id_tipo_entrega)
+);
+
+CREATE TABLE IF NOT EXISTS ProductosSeleccionados (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_pedido INT,
+    Productos TEXT,
+    FOREIGN KEY (id_pedido) REFERENCES Pedido(id_pedido)
 );
 
 CREATE TABLE IF NOT EXISTS PedidoxProducto (
@@ -88,6 +96,12 @@ CREATE TABLE IF NOT EXISTS Promocion2x1 (
     Precio DECIMAL(10, 2) NOT NULL,
     FOREIGN KEY (Producto1) REFERENCES Producto (ID_PRODUCTO),
     FOREIGN KEY (Producto2) REFERENCES Producto (ID_PRODUCTO)
+);
+
+CREATE TABLE IF NOT EXISTS Usuarios (
+    id_usuario INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_usuario VARCHAR(255) NOT NULL,
+    contrasena VARCHAR(255) NOT NULL
 );
 
 INSERT INTO TipoProducto (Nombre)

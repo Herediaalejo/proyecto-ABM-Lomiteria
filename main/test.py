@@ -1,19 +1,23 @@
-productos = ('Lomo Grande - Carne', 'Lomo Grande - Pollo/Cerdo x2', 'Milanesa', 'Mila Grosa')
+import tkinter as tk
+from tkinter import ttk
 
-productos_divididos = []
+def verificar_valor(event):
+    if combobox.get() == "Valor 3":
+        ventana.destroy()
 
-for producto in productos:
-    # Elimina "x2" si está presente en el nombre del producto
-    producto_limpio = producto.replace(' x2', '')
+ventana = tk.Tk()
+ventana.title("Ejemplo ComboBox con Verificación")
 
-    if 'x2' in producto:
-        # Divide el producto
-        partes = producto_limpio.split(' - ')
-        producto1 = partes[0] + ' - ' + partes[1]
-        producto2 = partes[0] + ' - ' + partes[1]
+combobox = ttk.Combobox(ventana, values=["Valor 1", "Valor 2", "Valor 3"])
+combobox.pack(padx=10, pady=10)
 
-        productos_divididos.extend([producto1, producto2])
-    else:
-        productos_divididos.append(producto_limpio)
+entry = tk.Entry(ventana)
+entry.pack(padx=10, pady=10)
 
-print(productos_divididos)
+boton_insertar = tk.Button(ventana, text="Insertar valor", command=lambda: combobox.set(entry.get()))
+boton_insertar.pack(padx=10, pady=10)
+
+# Asociar el evento <FocusOut> al ComboBox
+combobox.bind("<FocusOut>", verificar_valor)
+
+ventana.mainloop()

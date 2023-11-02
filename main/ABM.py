@@ -45,7 +45,7 @@ usuario_label.grid(row=1,column=0, pady=(20,10), columnspan=2)
 usuario_select = ttk.Combobox(frame, font=("Gill Sans MT", 16), state="readonly")
 usuario_select.grid(row=2,column=0, pady=(0,30), padx=(50,0))
 
-add_usuario = tk.Button(frame, text="+", font=("Gill Sans MT", 11, "bold"), relief="flat")
+add_usuario = tk.Button(frame, text="+", font=("Gill Sans MT", 11, "bold"), relief="flat", cursor="hand2", command=lambda:f.nuevo_usuario(root, usuario_select))
 add_usuario.grid(row=2,column=1,sticky="NW", ipadx=5, padx=(10,50))
 
 password_label = tk.Label(frame, text="Contraseña", font=("Gill Sans MT", 16), bg=verde)
@@ -54,10 +54,30 @@ password_label.grid(row=3, column=0, pady=(0, 10), columnspan=2)
 password_input = tk.Entry(frame, font=("Arial", 18), show="*", width=22)
 password_input.grid(row=4,column=0,pady=(0, 30), columnspan=2, padx=(50,50))
 
-usuario_select['values'] = ('Guillermo', 'Agostina', 'Franco', 'Lucas')
-
-ingreso_button = tk.Button(frame, text="INGRESAR", cursor="hand2", relief="flat", font=("Consolas", 14, "bold"), background=amarillo, command=lambda:f.ingresar(root))
+ingreso_button = tk.Button(frame, text="INGRESAR", cursor="hand2", relief="flat", font=("Consolas", 14, "bold"), background=amarillo, command=lambda:f.comprobar_usuario_contraseña(root,usuario_select,password_input))
 ingreso_button.grid(row=5,column=0, pady=(0,20), columnspan=2)
+
+# Conecta a la base de datos
+conexion = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    password="",
+    database="lomiteria"
+)
+
+# Crea un cursor
+cursor = conexion.cursor()
+
+# Realiza una consulta SQL para obtener los nombres de usuario
+cursor.execute("SELECT nombre_usuario FROM usuarios")
+nombres_usuarios = [row[0] for row in cursor.fetchall()]
+
+# Cierra el cursor y la conexión a la base de datos
+cursor.close()
+conexion.close()
+
+# Establece los nombres de usuario en el Combobox
+usuario_select['values'] = nombres_usuarios
 
 
 root.mainloop()
