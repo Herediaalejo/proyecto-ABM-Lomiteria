@@ -7,7 +7,8 @@ from datetime import datetime
 import os
 from PIL import Image, ImageTk
 
-pedidos = []  # Lista para rastrear los pedidos
+pedidos = {}
+pedidos_pendientes = {}
 inicio_tiempo = datetime.now()  # Variable global para el tiempo
 amarillo = "#e6a902"
 rojo = "#e60707"
@@ -18,12 +19,50 @@ entrega_seleccionada = None
 # Define una lista vacía para almacenar los productos seleccionados
 productos_seleccionados = []
 
+directorio_actual = os.path.dirname(os.path.abspath(__file__))
+
+# Combina el directorio actual con el nombre de la imagen
+ruta_imagen = os.path.join(directorio_actual, "avatar-hombre2.jpg")
+
+# Abre una imagen
+image = Image.open(ruta_imagen)
+
+nuevo_ancho = 250
+nuevo_alto = 250
+image = image.resize((nuevo_ancho, nuevo_alto), Image.LANCZOS)
+
+def cargar_pedidos():
+    try:
+        # Conecta a la base de datos
+        db = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="",
+            database="lomiteria"
+        )
+        
+        cursor = db.cursor()
+        
+        # Realiza una consulta para obtener los datos de los pedidos
+        cursor.execute("SELECT id_pedido, nombre_cliente, descripcion, total, entregado, fecha_registro FROM Pedido")
+        
+        # Recupera todos los registros de la consulta
+        pedidos = cursor.fetchall()
+
+    except mysql.connector.Error as error:
+        print(f"Error al cargar pedidos: {error}")
+
+    finally:
+        cursor.close()
+        db.close()
+        return pedidos
+
 def cargar_productos():
     # Crear una conexión a la base de datos
     conexion = mysql.connector.connect(
         host="localhost",
         user="root",
-        password="estudiantes2020",
+        password="",
         database="Lomiteria"  # Nombre de tu base de datos
     )
 
@@ -103,7 +142,7 @@ def seleccionar_entrada(button, seleccion):
     else:
         button.config(bg="white")
         entrada_seleccionada = None
-    print(entrada_seleccionada)
+    habilitar_continuar()
     
 def seleccionar_entrega(button, seleccion):
     global entrega_seleccionada
@@ -115,7 +154,13 @@ def seleccionar_entrega(button, seleccion):
     else:
         button.config(bg="white")
         entrega_seleccionada = None
-    print(entrega_seleccionada)
+    habilitar_continuar()
+
+def habilitar_continuar():
+    if entrega_seleccionada and entrada_seleccionada:
+        continuar_button.config(state="normal")
+    else:
+        continuar_button.config(state="disabled")
 
 def crear_celda(ventana, row, column, all_columns, color, padx, pady, width=200, height=30, op=0, sticky=""):
     if op == 0:
@@ -133,8 +178,15 @@ def eliminar_widgets(ventana):
     for widget in ventana.winfo_children():
         widget.destroy()
 
+def limpiar_variables():
+    global entrega_seleccionada, entrada_seleccionada
+    productos_seleccionados.clear()
+    entrega_seleccionada = None
+    entrada_seleccionada = None
+
+
 def menu_pedido(ventana):
-    global botones_entrada, botones_entrega
+    global botones_entrada, botones_entrega, continuar_button
     ventana.config(bg= blanco)
     eliminar_widgets(ventana)
     screen_width = ventana.winfo_screenwidth()
@@ -188,7 +240,7 @@ def menu_pedido(ventana):
     entrega_frame.grid_columnconfigure(3, weight=1)
     entrega_frame.grid_columnconfigure(4, weight=1)
 
-    local_button = tk.Button(entrega_frame, cursor="hand2", width=10, text="Local", borderwidth=2, font=("Gill Sans MT", 20), relief="solid", command=lambda:seleccionar_entrega(local_button,"Retira"))
+    local_button = tk.Button(entrega_frame, cursor="hand2", width=10, text="Local", borderwidth=2, font=("Gill Sans MT", 20), relief="solid", command=lambda:seleccionar_entrega(local_button,"Retira en local"))
     local_button.grid(column=1,row=0, columnspan=2)
 
     delivery_button = tk.Button(entrega_frame, cursor="hand2", width=10, text="Delivery", borderwidth=2, font=("Gill Sans MT", 20), relief="solid", command=lambda:seleccionar_entrega(delivery_button,"Delivery"))
@@ -196,11 +248,11 @@ def menu_pedido(ventana):
 
     botones_entrega = [local_button, delivery_button]
 
-    regresar_button = tk.Button(ventana, cursor="hand2", width=10, text="Regresar", bg="#e87e72", borderwidth=2, font=("Gill Sans MT", 20), relief="solid", command=lambda:[ventana.destroy(),create_window(0)])
+    regresar_button = tk.Button(ventana, cursor="hand2", width=10, text="Regresar", bg="#e87e72", borderwidth=2, font=("Gill Sans MT", 20), relief="solid", command=lambda:[limpiar_variables(),ventana.destroy(),create_window(0)])
     regresar_button.grid(column=0,row=4, ipady=20)
 
-    continuar_button = tk.Button(ventana, cursor="hand2", width=10, text="Continuar", bg="#a5e872", borderwidth=2, font=("Gill Sans MT", 20), relief="solid", command=lambda:menu_pedido2(ventana))
-    continuar_button.grid(column=4,row=4, ipady=20)
+    continuar_button = tk.Button(ventana, cursor="hand2", state="disabled", width=10, text="Continuar", bg="#a5e872", borderwidth=2, font=("Gill Sans MT", 20), relief="solid", command=lambda: menu_pedido2(ventana))
+    continuar_button.grid(column=4, row=4, ipady=20)
 
 def menu_pedido2(ventana):
     global productos_seleccionados_listbox, productos_precios
@@ -247,7 +299,7 @@ def menu_pedido2(ventana):
             ventana.columnconfigure(column, weight=1)  # Expande la columna 
 
     form = tk.Frame(ventana, relief="solid", bg=blanco, borderwidth=3)
-    form.grid(row=0,column=2,sticky="nsew", columnspan=3, rowspan=10, padx=(150,20), pady=20)
+    form.grid(row=0,column=3,sticky="nsew", columnspan=2, rowspan=10, padx=(0,20), pady=20)
 
     for row in range(12):
         for column in range(3):
@@ -283,7 +335,7 @@ def menu_pedido2(ventana):
     modo_entrega_label = tk.Label(form, bg=blanco, text="Modo de entrega:", font=("Gill Sans MT", 16))
     
     # Usar un ComboBox (ttk.Combobox) para el modo de entrega
-    modo_entrega_values = ["Delivery", "Retira"]
+    modo_entrega_values = ["Delivery", "Retira en local"]
     modo_entrega_combo = ttk.Combobox(form, values=modo_entrega_values, font=("Gill Sans MT", 16))
 
     modo_entrega_combo.bind("<<ComboboxSelected>>", lambda event: mostrar_campos_local())
@@ -305,7 +357,7 @@ def menu_pedido2(ventana):
     producto_label = tk.Label(form, bg=blanco, text="Producto/s:", font=("Gill Sans MT", 16))
     producto_label.grid(row=7, column=0, sticky="e", padx=(10, 5), pady=(10, 0))
 
-    productos_seleccionados_listbox = tk.Listbox(form, height=5, width=35, font=("Gill Sans MT", 14))
+    productos_seleccionados_listbox = tk.Listbox(form, height=3, width=35, font=("Gill Sans MT", 14))
     productos_seleccionados_listbox.grid(row=7, column=1, sticky="w", padx=(5, 0))
 
     # Agrega un botón para limpiar la Listbox
@@ -315,7 +367,7 @@ def menu_pedido2(ventana):
     descripcion_label = tk.Label(form, bg=blanco, text="Descripción:", font=("Gill Sans MT", 16))
     descripcion_label.grid(row=9, column=0, sticky="e", padx=(10, 5), pady=(10, 0))
 
-    descripcion_text = tk.Text(form, font=("Gill Sans MT", 16), width=35, height=3)
+    descripcion_text = tk.Text(form, font=("Gill Sans MT", 12), width=35, height=2)
     descripcion_text.grid(row=9, column=1, sticky="w", padx=(5, 10), pady=(10, 0))
 
     medio_pago_label = tk.Label(form, bg=blanco, text="Medio de pago:", font=("Gill Sans MT", 16))
@@ -328,36 +380,130 @@ def menu_pedido2(ventana):
     medio_pago_combo.set(medio_pago_values[0])  # Establecer un valor predeterminado
 
     def guardar_datos():
-        # Lógica para guardar los datos del formulario
-        pass
 
-    def imprimir_datos():
-        # Lógica para imprimir los datos del formulario
-        pass
+        productos = productos_seleccionados_listbox.get(0, tk.END)
+        productos_divididos = []
 
-    # Botón "Guardar"
-    guardar_button = tk.Button(form, text="Guardar", bg="#a5e872", cursor="hand2", font=("Gill Sans MT", 20), command=guardar_datos)
-    guardar_button.grid(row=12, column=1, sticky="e", padx=(10, 5), pady=10)
+        for producto in productos:
+            # Elimina "x2" si está presente en el nombre del producto
+            if 'x2' in producto:
+                producto_limpio = producto.replace(' x2', '')
+                productos_divididos.append(producto_limpio)
+                productos_divididos.append(producto_limpio)
+            else:
+                productos_divididos.append(producto)
+
+        # Obtiene los datos del formulario
+        tipo_entrada = tipo_entrada_combo.get()
+        modo_consumo = modo_consumo_combo.get()
+        modo_entrega = modo_entrega_combo.get()
+        nombre_cliente = nombre_cliente_entry.get()
+        telefono = telefono_entry.get()
+        direccion = direccion_entry.get()
+        descripcion = descripcion_text.get("1.0", "end-1c")
+        medio_pago = medio_pago_combo.get()
+
+        # Conecta a la base de datos (asegúrate de configurar los parámetros de conexión correctamente)
+        db = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="",
+            database="lomiteria"
+        )
+
+        # Crea un cursor
+        cursor = db.cursor()
+
+        # Consultas SQL para obtener los IDs de las tablas relacionadas
+        cursor.execute("SELECT id_modo_consumo FROM ModoConsumo WHERE nombre = %s", (modo_consumo,))
+        id_modo_consumo = cursor.fetchone()[0]
+
+        cursor.execute("SELECT id_tipo_entrada FROM TipoEntrada WHERE nombre = %s", (tipo_entrada,))
+        id_tipo_entrada = cursor.fetchone()[0]
+
+        cursor.execute("SELECT id_tipo_entrega FROM TipoEntrega WHERE nombre = %s", (modo_entrega,))
+        id_tipo_entrega = cursor.fetchone()[0]
+
+
+        # Sentencia SQL para insertar los datos en la tabla Pedido
+        insert_query = "INSERT INTO Pedido (nombre_cliente, descripcion, total, id_modo_consumo, id_tipo_entrada, id_tipo_entrega, telefono, direccion, medio_pago) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
+
+        total, lista = calcular_precio_total()
+
+        # Valores a insertar en la tabla
+        values = (nombre_cliente, descripcion, total, id_modo_consumo, id_tipo_entrada, id_tipo_entrega, telefono, direccion, medio_pago)
+
+        try:
+            # Ejecuta la consulta SQL
+            cursor.execute(insert_query, values)
+
+            # Guarda los cambios en la base de datos
+            db.commit()
+
+            # Obtén el ID del pedido recién insertado
+            id_pedido = cursor.lastrowid
+
+        except Exception as e:
+            print("Error al insertar en la base de datos:", str(e))
+        
+        # Crea un diccionario para rastrear la cantidad de cada producto
+        cantidad_productos = {}
+
+        # Recorre la lista de productos
+        for producto in productos_divididos:
+            # Consulta SQL para obtener el ID del producto por su nombre
+            cursor.execute("SELECT id_producto FROM Producto WHERE Nombre = %s", (producto,))
+            resultado = cursor.fetchone()
+
+            if resultado:
+                id_producto = resultado[0]
+
+                # Si el producto ya está en el diccionario, aumenta la cantidad en 1
+                if id_producto in cantidad_productos:
+                    cantidad_productos[id_producto] += 1
+                else:
+                    cantidad_productos[id_producto] = 1
+
+        # Ahora, inserta los datos en la tabla PedidoxProducto con las cantidades correctas
+        for id_producto, cantidad in cantidad_productos.items():
+            # Sentencia SQL para insertar los datos en la tabla PedidoxProducto
+            insert_query = "INSERT INTO PedidoxProducto (id_pedido, id_producto, cantidad_producto) VALUES (%s, %s, %s)"
+
+            # Valores a insertar en la tabla
+            values = (id_pedido, id_producto, cantidad)
+
+            try:
+                # Ejecuta la consulta SQL
+                cursor.execute(insert_query, values)
+            except Exception as e:
+                print("Error al insertar en la tabla PedidoxProducto:", str(e))
+            
+    # Guarda los cambios en la base de datos
+        db.commit()
+
+        # Cierra la conexión a la base de datos
+        db.close()
+
+
+    registrar_button = tk.Button(form, text="Registrar", bg="#a5e872", cursor="hand2", font=("Gill Sans MT", 16), command=lambda:[guardar_datos(), ventana.destroy(),create_window(1)])
+    registrar_button.grid(row=11, column=1, sticky="e", padx=(10, 5), pady=10)
 
     # Botón "Imprimir"
-    imprimir_button = tk.Button(form, text="Imprimir", bg="#a1c2f7", cursor="hand2", font=("Gill Sans MT", 20), command=imprimir_datos)
-    imprimir_button.grid(row=12, column=2, padx=(5, 10), pady=10)
-
-# ... (tu código existente)
-
+    imprimir_button = tk.Button(form, text="Imprimir", bg="#a1c2f7", cursor="hand2", font=("Gill Sans MT", 16), command=lambda:generar_pedido(ventana, obtener_opcion()))
+    imprimir_button.grid(row=11, column=2, sticky="w", padx=(5, 10), pady=10)
 
     mostrar_campos_local()
 
-    regresar_button = tk.Button(ventana, cursor="hand2", width=10, text="Regresar", bg="#e87e72", borderwidth=2, font=("Gill Sans MT", 20), relief="solid", command=lambda:[productos_seleccionados.clear(), ventana.destroy(),create_window(0)])
+    regresar_button = tk.Button(ventana, cursor="hand2", width=10, text="Regresar", bg="#e87e72", borderwidth=2, font=("Gill Sans MT", 20), relief="solid", command=lambda:[limpiar_variables(), ventana.destroy(),create_window(0)])
     regresar_button.grid(column=0,row=9)
 
     # Crear un Canvas como contenedor
     canvas = tk.Canvas(ventana)
-    canvas.grid(row=0,column=0,sticky="nsew", columnspan=3, rowspan=8, padx=(20,300), pady=(20,0))
+    canvas.grid(row=0,column=0,sticky="nsew", columnspan=3, rowspan=8, padx=(20,20), pady=(20,0))
 
     # Crear un Scrollbar a la derecha del Canvas
     scrollbar = tk.Scrollbar(ventana, command=canvas.yview)
-    scrollbar.grid(row=0, column=2, sticky="nse", rowspan=8, pady=(20,0), padx=(0,300))  # Ajuste la columna para colocarlo a la derecha
+    scrollbar.grid(row=0, column=2, sticky="nse", rowspan=8, pady=(20,0), padx=(0,20))  # Ajuste la columna para colocarlo a la derecha
     canvas.configure(yscrollcommand=scrollbar.set)
     
 
@@ -378,7 +524,7 @@ def menu_pedido2(ventana):
     preciox1_title.grid(row=0,column=2, padx=(20,0), pady=10)
     
     preciox2_title = tk.Label(productos_frame, text="x2", font=("Gill Sans MT", 20), bg=blanco)
-    preciox2_title.grid(row=0,column=3, padx=(150,150), pady=10)
+    preciox2_title.grid(row=0,column=3, padx=50, pady=10)
 
 
     # Configurar el evento de desplazamiento
@@ -402,7 +548,7 @@ def menu_pedido2(ventana):
         precio_x1_label.grid(row=i+1, column=2, sticky="w", padx=(20,0), pady=(0,10))
 
         precio_x2_label = tk.Label(productos_frame, text=f"${precio_x2}", bg="#e87e72", font=("Gill Sans MT", 16))
-        precio_x2_label.grid(row=i+1, column=3, sticky="w", padx=(150,150), pady=(0,10))
+        precio_x2_label.grid(row=i+1, column=3, sticky="w", padx=50, pady=(0,10))
 
         if precio_x2 == "":
             precio_x2_label.config(text="") 
@@ -418,7 +564,7 @@ def menu_pedido2(ventana):
 
     # Crear un frame para mostrar el total
     total_frame = tk.Frame(ventana, bg="lightblue")
-    total_frame.grid(column=1, row=9, sticky="nsew", pady=(0,20))  # Espacio debajo del frame del formulario
+    total_frame.grid(column=1, row=9, sticky="nsew", pady=(0,20), columnspan=2, padx=30)  # Espacio debajo del frame del formulario
 
     total_frame.rowconfigure(0, weight=1)  # Expande la fila 
     total_frame.columnconfigure(0, weight=1)  # Expande la columna
@@ -433,160 +579,312 @@ def menu_pedido2(ventana):
     # Crea un diccionario que asocie los nombres de los productos con sus precios
     productos_precios = {nombre: (precio_x1, precio_x2) for nombre, precio_x1, precio_x2 in productos_con_precios}
 
-    # ... (tu código existente)
+    lista_precios = []
 
     # Función para calcular el precio total
     def calcular_precio_total():
         precio_total = 0.0  # Inicializa como float
+        lista_precios.clear()  # Limpia la lista de precios
         for producto in productos_seleccionados_listbox.get(0, tk.END):
             nombre_producto = producto.split(" x")[0]  # Elimina " x2" si está presente
             precio_x1, precio_x2 = productos_precios.get(nombre_producto, (0.0, 0.0))  # Inicializa como float
             cantidad = int(producto.split(" x")[1]) if " x" in producto else 1
-
+            
             # Acumula el precio en cada iteración teniendo en cuenta la cantidad y si tiene precio x2
             if cantidad == 2 and precio_x2:
                 precio_total += float(precio_x2)
+                lista_precios.append(float(precio_x2))  # Agrega el precio a la lista
             else:
                 precio_total += float(precio_x1)
+                lista_precios.append(float(precio_x1))
 
         # Actualiza la etiqueta total_label con el precio total
         total_label.config(text=f"Total: ${precio_total:.2f}")
+        return precio_total, lista_precios
+    
+    def obtener_opcion():
+        # Obtén las selecciones de modo de consumo y modo de entrega
+        modo_consumo = modo_consumo_combo.get()
+        modo_entrega = modo_entrega_combo.get()
 
+        # Establece la variable opcion según las condiciones
+        if modo_consumo == "Mesa":
+            opcion = 0
+        elif modo_entrega == "Retira en local":
+            opcion = 1
+        elif modo_entrega == "Delivery":
+            opcion = 2
+        else:
+            opcion = 3  # Establece una opción predeterminada en caso de que ninguna de las condiciones coincida
 
+        return opcion
+    
+    def generar_pedido(form, op):
+        # Obtener los valores de los campos
+        tipo_entrada = tipo_entrada_combo.get()
+        modo_consumo = modo_consumo_combo.get()
+        modo_entrega = modo_entrega_combo.get()
+        nombre_cliente = nombre_cliente_entry.get()
+        telefono = telefono_entry.get()
+        direccion = direccion_entry.get()
+        descripcion = descripcion_text.get("1.0", "end-1c")  # Obtiene el contenido del campo de descripción
+        medio_pago = medio_pago_combo.get()
 
-def create_window(op):
-    if op == 0:
-        principal = tk.Tk()
-        principal.state('zoomed')
-        principal.config(bg= blanco)
-        screen_width = principal.winfo_screenwidth()
-        bandeja_color = "#a1c2f7"
+        if op == 0:
+            modo_entrega = "Consume en local"
+            nombre_cliente = "N/A"
+            telefono = "N/A"
+            direccion = "N/A"
 
-        for row in range(10):
-            for column in range(6):
-                crear_celda(principal, row, column, all_columns=6 , color=blanco, padx=(10,10), pady=(20,10), height=70)
-        title_lab = tk.Label(principal, text="Lomitos X2", font=("Gill Sans MT", 32), bg=blanco)
-        title_lab.grid(row=0,column=2,columnspan=2)
-        title2_lab = tk.Label(principal, text="HADLER\nSistema de gestión", font=("Gill Sans MT", 20), bg=blanco)
-        title2_lab.grid(row=0,column=0,columnspan=2, sticky="n", pady=(30,0))
+            # Verificar que los campos no estén vacíos
+            if (
+                not tipo_entrada
+                or not modo_consumo
+                or not medio_pago
+                or productos_seleccionados_listbox.size() == 0
+                or not modo_entrega
+            ):
+                messagebox.showerror("Error", "Completa todos los campos para imprimir el pedido.")
+                return
+            
+        elif op == 1:
+            telefono = "N/A"
+            direccion = "N/A"
+            # Verificar que los campos no estén vacíos
+            if (
+                not tipo_entrada
+                or not modo_consumo
+                or not modo_entrega
+                or not nombre_cliente
+                or productos_seleccionados_listbox.size() == 0
+                or not medio_pago
+            ):
+                messagebox.showerror("Error", "Completa todos los campos para imprimir el pedido.")
+                return
+        elif op == 2:
+            # Verificar que los campos no estén vacíos
+            if (
+                not tipo_entrada
+                or not modo_consumo
+                or not modo_entrega
+                or not nombre_cliente
+                or not telefono
+                or not direccion
+                or productos_seleccionados_listbox.size() == 0
+                or not medio_pago
+            ):
+                messagebox.showerror("Error", "Completa todos los campos para imprimir el pedido.")
+                return
+        else:
+            messagebox.showerror("Error", "Completa todos los campos para imprimir el pedido.")
+            return
 
-        bandeja_frame = tk.Frame(principal, bg=bandeja_color, borderwidth=3, relief="solid")
-        bandeja_frame.grid(row=1, column=0, rowspan=7, columnspan=2, sticky="nsew", padx=10, pady=(40,80))
+        if not descripcion:
+            descripcion="N/A"
 
-        subrayado = ttk.Style()
-        subrayado.configure('Subrayado.TLabel', font=("Gill Sans MT", 20, 'underline'))
-
-        bandeja_title = ttk.Label(bandeja_frame, text="Bandeja de pendientes", style='Subrayado.TLabel', background=bandeja_color)
-        bandeja_title.grid(row=0, column=0, columnspan=6)
-
-        botones_frame = tk.Frame(principal, bg=bandeja_color, borderwidth=3, relief="solid")
-
-        botones_frame.grid(row=1, column=2, columnspan=2, rowspan=4, padx=(40,0), pady=(40,0))
-
-        regPedido_button = tk.Button(botones_frame, cursor="hand2", text="Registrar pedido",font=("Gill Sans MT", 20), bg=amarillo, relief="solid", borderwidth=2, command=lambda:menu_pedido(principal))
-        regPedido_button.grid(row=0,column=0,ipadx=10, padx=20, pady=20)
-
-        regProducto_button = tk.Button(botones_frame, cursor="hand2", text="Registrar producto",font=("Gill Sans MT", 20), bg=amarillo, relief="solid", borderwidth=2)
-        regProducto_button.grid(row=0,column=1,ipadx=2, padx=20, pady=20)
-
-        regCompra_button = tk.Button(botones_frame, cursor="hand2", text="Registrar compra",font=("Gill Sans MT", 20), bg=amarillo, relief="solid", borderwidth=2)
-        regCompra_button.grid(row=1,column=0,ipadx=5, padx=20, pady=20)
-
-        regPagos_button = tk.Button(botones_frame, cursor="hand2", text="Registrar pago",font=("Gill Sans MT", 20), bg=amarillo, relief="solid", borderwidth=2)
-        regPagos_button.grid(row=1,column=1,ipadx=27, padx=20, pady=20)
+        ticket = tk.Toplevel(form)
+        ticket.title("Ticket de Pedido")
         
-        actPrecio_button = tk.Button(botones_frame, cursor="hand2", text="Actualizar precio",font=("Gill Sans MT", 20), bg=amarillo, relief="solid", borderwidth=2)
-        actPrecio_button.grid(row=2,column=0,ipadx=7, padx=20, pady=20)
+        # Cambia el tamaño de la ventana antes de agregar elementos
+        ticket.geometry("500x800")  # Ajusta las dimensiones según tus necesidades
 
-        actStock_button = tk.Button(botones_frame, cursor="hand2", text="Actualizar stock",font=("Gill Sans MT", 20), bg=amarillo, relief="solid", borderwidth=2)
-        actStock_button.grid(row=2,column=1,ipadx=19, padx=20, pady=20)
+       # Crea un Canvas que servirá como contenedor
+        canvas = tk.Canvas(ticket)
+        canvas.pack(side="left", fill="both", expand=True)
 
-        verEstad_button = tk.Button(botones_frame, cursor="hand2", text="Ver estadisticas",font=("Gill Sans MT", 20), bg=amarillo, relief="solid", borderwidth=2)
-        verEstad_button.grid(row=3,column=0,ipadx=17, padx=20, pady=20) 
+        # Agrega una barra de desplazamiento vertical
+        scrollbar = tk.Scrollbar(ticket, command=canvas.yview)
+        scrollbar.pack(side="right", fill="y")
 
-        verDatos_button = tk.Button(botones_frame, cursor="hand2", text="Ver datos",font=("Gill Sans MT", 20), bg=amarillo, relief="solid", borderwidth=2)
-        verDatos_button.grid(row=3,column=1,ipadx=54, padx=20, pady=20) 
+        # Configura el Canvas para utilizar la barra de desplazamiento
+        canvas.configure(yscrollcommand=scrollbar.set)
 
-        # Obtén la ruta del directorio actual donde se encuentra tu archivo .py
-        directorio_actual = os.path.dirname(os.path.abspath(__file__))
+        # Crea un Frame que será contenido dentro del Canvas
+        ticket_frame = tk.Frame(canvas)
+        canvas.create_window((0, 0), window=ticket_frame, anchor="nw")
 
-        # Combina el directorio actual con el nombre de la imagen
-        ruta_imagen = os.path.join(directorio_actual, "avatar-hombre2.jpg")
+        # Agregar los datos del pedido al ticket
+        tk.Label(ticket_frame, text="Ticket de Pedido", font=("Gill Sans MT", 18)).grid(row=0, column=0, columnspan=2)
 
-        # Abre una imagen
-        image = Image.open(ruta_imagen)
+        tk.Label(ticket_frame, text=f"Tipo de entrada:", font=("Gill Sans MT", 14)).grid(row=1, column=0, sticky="w", pady=(0,20))
+        tk.Label(ticket_frame, text=tipo_entrada, font=("Gill Sans MT", 14)).grid(row=1, column=1, sticky="w", pady=(0,20))
 
-        nuevo_ancho = 250
-        nuevo_alto = 250
-        image = image.resize((nuevo_ancho, nuevo_alto), Image.LANCZOS)
+        tk.Label(ticket_frame, text=f"Modo de consumo:", font=("Gill Sans MT", 14)).grid(row=2, column=0, sticky="w", pady=(0,20))
+        tk.Label(ticket_frame, text=modo_consumo, font=("Gill Sans MT", 14)).grid(row=2, column=1, sticky="w", pady=(0,20))
 
-        # Convierte la imagen a un formato compatible con tkinter
-        photo = ImageTk.PhotoImage(image)
+        tk.Label(ticket_frame, text=f"Modo de entrega:", font=("Gill Sans MT", 14)).grid(row=3, column=0, sticky="w", pady=(0,20))
+        tk.Label(ticket_frame, text=modo_entrega, font=("Gill Sans MT", 14)).grid(row=3, column=1, sticky="w", pady=(0,20))
 
-        # Crear un widget Label para mostrar la imagen
-        label = tk.Label(principal, image=photo, bg="#fcebeb")
-        label.grid(row=2, column=4, columnspan=2, rowspan=2)
+        tk.Label(ticket_frame, text=f"Nombre del cliente:", font=("Gill Sans MT", 14)).grid(row=4, column=0, sticky="w", pady=(0,20))
+        tk.Label(ticket_frame, text=nombre_cliente, font=("Gill Sans MT", 14)).grid(row=4, column=1, sticky="w", pady=(0,20))
 
-        cUser_button = tk.Button(principal, cursor="hand2", text="Cambiar usuario",font=("Gill Sans MT", 20), bg=amarillo, relief="solid", borderwidth=2)
-        cUser_button.grid(row=1,column=4,ipadx=20, columnspan=2, pady=(40,10))
+        if telefono:
+            tk.Label(ticket_frame, text=f"Teléfono:", font=("Gill Sans MT", 14)).grid(row=5, column=0, sticky="w", pady=(0,20))
+            tk.Label(ticket_frame, text=telefono, font=("Gill Sans MT", 14)).grid(row=5, column=1, sticky="w", pady=(0,20))
 
-        userN_label = tk.Label(principal, text="nombre\napellido",font=("Gill Sans MT", 14), bg="#fcebeb")
-        userN_label.grid(row=4,column=4,sticky="n", columnspan=2, pady=(10,0))
+        if direccion:
+            tk.Label(ticket_frame, text=f"Dirección:", font=("Gill Sans MT", 14)).grid(row=6, column=0, sticky="w", pady=(0,20))
+            tk.Label(ticket_frame, text=direccion, font=("Gill Sans MT", 14)).grid(row=6, column=1, sticky="w", pady=(0,20))
+    
+        tk.Label(ticket_frame, text=f"Descripción:", font=("Gill Sans MT", 14)).grid(row=7, column=0, sticky="w", pady=(20,0))
+        tk.Label(ticket_frame, text=descripcion, font=("Gill Sans MT", 14)).grid(row=7, column=1, sticky="w", pady=(20,0))
+
+        tk.Label(ticket_frame, text=f"Medio de pago:", font=("Gill Sans MT", 14)).grid(row=8, column=0, sticky="w", pady=(20,20))
+        tk.Label(ticket_frame, text=medio_pago, font=("Gill Sans MT", 14)).grid(row=8, column=1, sticky="w", pady=(20,20))
+
+        precio_total,lista_precios = calcular_precio_total()
+        tk.Label(ticket_frame, text="Productos:", font=("Gill Sans MT", 14)).grid(row=9, column=0, sticky="w", pady=(0,20))
+
+        row_num = 10
+        for producto, precio in zip(productos_seleccionados, lista_precios):
+            tk.Label(ticket_frame, text=producto, font=("Gill Sans MT", 14)).grid(row=row_num, column=0, sticky="w")
+            tk.Label(ticket_frame, text=f"${precio:.2f}", font=("Gill Sans MT", 14)).grid(row=row_num, column=1, sticky="w", padx=(20,0))
+            row_num += 1
+
+        ancho_ticket = ticket.winfo_width()
+        linea = "-" * 60
+
+        tk.Label(ticket_frame, text=linea, font=("Gill Sans MT", 14)).grid(row=row_num, column=0, columnspan=2)
+
+        tk.Label(ticket_frame, text="Total:", font=("Gill Sans MT", 14)).grid(row=row_num+1, column=0, sticky="w")
+
+        tk.Label(ticket_frame, text=f"${precio_total}", font=("Gill Sans MT", 14)).grid(row=row_num+1, column=1, sticky="w", padx=(20,0))
+
+        # Agregar un botón para cerrar el ticket
+        cerrar_button = tk.Button(ticket_frame, font=("Gill Sans MT", 12), cursor="hand2", text="Cerrar", command=ticket.destroy)
+        cerrar_button.grid(row=row_num + 2, column=0, columnspan=2, pady=(0,20))
+
+        # Ajusta el tamaño del Canvas cuando el contenido cambia
+        ticket_frame.update_idletasks()
+        canvas.config(scrollregion=canvas.bbox("all"))
+
+        ticket_frame.grid_columnconfigure(0, weight=1)
+        ticket_frame.grid_columnconfigure(1, weight=1)
+
+def create_window(op=0):
+    
+    principal = tk.Tk()
+    principal.state('zoomed')
+    principal.config(bg= blanco)
+    screen_width = principal.winfo_screenwidth()
+    bandeja_color = "#a1c2f7"
+    # Convierte la imagen a un formato compatible con tkinter
+    avatar = ImageTk.PhotoImage(image)
+
+    for row in range(10):
+        for column in range(6):
+            crear_celda(principal, row, column, all_columns=6 , color=blanco, padx=(10,10), pady=(20,10), height=70)
+    title_lab = tk.Label(principal, text="Lomitos X2", font=("Gill Sans MT", 32), bg=blanco)
+    title_lab.grid(row=0,column=2,columnspan=2)
+    title2_lab = tk.Label(principal, text="HADLER\nSistema de gestión", font=("Gill Sans MT", 20), bg=blanco)
+    title2_lab.grid(row=0,column=0,columnspan=2, sticky="n", pady=(30,0))
+
+    bandeja_frame = tk.Frame(principal, bg=bandeja_color, borderwidth=3, relief="solid")
+    bandeja_frame.grid(row=1, column=0, rowspan=7, columnspan=2, sticky="nsew", padx=10, pady=(40,80))
+
+    subrayado = ttk.Style()
+    subrayado.configure('Subrayado.TLabel', font=("Gill Sans MT", 20, 'underline'))
+
+    bandeja_title = ttk.Label(bandeja_frame, text="Bandeja de pendientes", style='Subrayado.TLabel', background=bandeja_color)
+    bandeja_title.grid(row=0, column=0, columnspan=6)
+
+    botones_frame = tk.Frame(principal, bg=bandeja_color, borderwidth=3, relief="solid")
+
+    botones_frame.grid(row=1, column=2, columnspan=2, rowspan=4, padx=(40,0), pady=(40,0))
+
+    regPedido_button = tk.Button(botones_frame, cursor="hand2", text="Registrar pedido",font=("Gill Sans MT", 20), bg=amarillo, relief="solid", borderwidth=2, command=lambda:menu_pedido(principal))
+    regPedido_button.grid(row=0,column=0,ipadx=10, padx=20, pady=20)
+
+    regProducto_button = tk.Button(botones_frame, cursor="hand2", text="Registrar producto",font=("Gill Sans MT", 20), bg=amarillo, relief="solid", borderwidth=2)
+    regProducto_button.grid(row=0,column=1,ipadx=2, padx=20, pady=20)
+
+    regCompra_button = tk.Button(botones_frame, cursor="hand2", text="Registrar compra",font=("Gill Sans MT", 20), bg=amarillo, relief="solid", borderwidth=2)
+    regCompra_button.grid(row=1,column=0,ipadx=5, padx=20, pady=20)
+
+    regPagos_button = tk.Button(botones_frame, cursor="hand2", text="Registrar pago",font=("Gill Sans MT", 20), bg=amarillo, relief="solid", borderwidth=2)
+    regPagos_button.grid(row=1,column=1,ipadx=27, padx=20, pady=20)
+    
+    actPrecio_button = tk.Button(botones_frame, cursor="hand2", text="Actualizar precio",font=("Gill Sans MT", 20), bg=amarillo, relief="solid", borderwidth=2)
+    actPrecio_button.grid(row=2,column=0,ipadx=7, padx=20, pady=20)
+
+    actStock_button = tk.Button(botones_frame, cursor="hand2", text="Actualizar stock",font=("Gill Sans MT", 20), bg=amarillo, relief="solid", borderwidth=2)
+    actStock_button.grid(row=2,column=1,ipadx=19, padx=20, pady=20)
+
+    verEstad_button = tk.Button(botones_frame, cursor="hand2", text="Ver estadisticas",font=("Gill Sans MT", 20), bg=amarillo, relief="solid", borderwidth=2)
+    verEstad_button.grid(row=3,column=0,ipadx=17, padx=20, pady=20) 
+
+    verDatos_button = tk.Button(botones_frame, cursor="hand2", text="Ver datos",font=("Gill Sans MT", 20), bg=amarillo, relief="solid", borderwidth=2)
+    verDatos_button.grid(row=3,column=1,ipadx=54, padx=20, pady=20) 
+
+    # Crear un widget Label para mostrar la imagen
+    label = tk.Label(principal, image=avatar, bg="#fcebeb")
+    label.grid(row=2, column=4, columnspan=2, rowspan=2)
+
+    cUser_button = tk.Button(principal, cursor="hand2", text="Cambiar usuario",font=("Gill Sans MT", 20), bg=amarillo, relief="solid", borderwidth=2)
+    cUser_button.grid(row=1,column=4,ipadx=20, columnspan=2, pady=(40,10))
+
+    userN_label = tk.Label(principal, text="nombre\napellido",font=("Gill Sans MT", 14), bg="#fcebeb")
+    userN_label.grid(row=4,column=4,sticky="n", columnspan=2, pady=(10,0))
+
+    
+    crear_pedido(principal, bandeja_frame, bandeja_color)
+
+    principal.mainloop()
+
+pedidos = cargar_pedidos()
+# Filtra los productos con entregado en 0
+pedidos_pendientes = [pedido for pedido in pedidos if pedido[4] == 0]
 
 
-        def crear_pedido():
-            nuevo_pedido_frame = tk.Frame(bandeja_frame, bg=bandeja_color, padx=10, pady=5, borderwidth=2, relief="solid")
-            nuevo_pedido_frame.grid(row=len(pedidos) + 2, column=0, columnspan=6, padx=(5, 5), pady=(5, 5))
+def crear_pedido(ventana, frame, color):
 
-            pedido_font = ("Gill Sans MT", 10)
+    def actualizar_tiempo(ventana, label, hora_registro):
+        hora_actual = datetime.now()
+        
+        # Calcula la diferencia de tiempo
+        diferencia = hora_actual - hora_registro
 
-            pedido_label = tk.Label(nuevo_pedido_frame, text=f"Pedido {len(pedidos) + 1}", cursor="hand2", background=bandeja_color, font=("Gill Sans MT", 10, "bold"))
-            tiempo_label = tk.Label(nuevo_pedido_frame, text="00:00", background=bandeja_color, font=("Gill Sans MT", 10, "bold"))
-            entregar_button = tk.Button(nuevo_pedido_frame, text="ENTREGAR", cursor="hand2", relief="flat", font=pedido_font)
-            modificar_button = tk.Button(nuevo_pedido_frame, text="MODIFICAR", cursor="hand2", relief="flat", font=pedido_font)
-            cancelar_button = tk.Button(nuevo_pedido_frame, text="CANCELAR", cursor="hand2", relief="flat", font=pedido_font)
-            imprimir_button = tk.Button(nuevo_pedido_frame, text="IMPRIMIR", cursor="hand2", relief="flat", font=pedido_font)
+        # Calcula horas, minutos y segundos
+        segundos_totales = diferencia.total_seconds()
+        horas, segundos_totales = divmod(segundos_totales, 3600)
+        minutos, segundos = divmod(segundos_totales, 60)
 
-            #pedido_label.bind("<Button-1>", "Funcion")
+        # Formatea los valores con dos dígitos
+        horas_str = f'{int(horas):02}'
+        minutos_str = f'{int(minutos):02}'
+        segundos_str = f'{int(segundos):02}'
 
-            pedido_label.grid(row=0, column=0, padx=(0,20))
-            tiempo_label.grid(row=0, column=1, padx=(0,20))
-            entregar_button.grid(row=0, column=2, padx=(0,20))
-            modificar_button.grid(row=0, column=3, padx=(0,20))
-            cancelar_button.grid(row=0, column=4, padx=(0,20))
-            imprimir_button.grid(row=0, column=5)
+        # Construye la cadena de tiempo en el formato deseado
+        tiempo_transcurrido = f"{horas_str}:{minutos_str}:{segundos_str}"
 
-            nuevo_pedido = {
-                'frame': nuevo_pedido_frame,
-                'tiempo_label': tiempo_label,
-                'inicio_tiempo': datetime.now()
-            }
-            pedidos.append(nuevo_pedido)
+        # Luego, establece el texto en la etiqueta tiempo_label
+        label.config(text=tiempo_transcurrido)
 
-        """nuevo_pedido_button = tk.Button(principal, text="Nuevo Pedido", relief="flat", command=lambda: crear_pedido(), bg=amarillo)
+        # Programa la siguiente actualización después de 1000 ms (1 segundo)
+        ventana.after(1000, lambda: actualizar_tiempo(ventana, label, hora_registro))
 
-        nuevo_pedido_button.grid(row=3, column=3, columnspan=2, pady=(20, 10))"""
+    pedido_font = ("Gill Sans MT", 10)
+    row = 0
+    for pedido in pedidos_pendientes:
+        nuevo_pedido_frame = tk.Frame(frame, bg=color, padx=10, pady=5, borderwidth=2, relief="solid")
+        nuevo_pedido_frame.grid(row=row, column=0, columnspan=6, padx=(5, 5), pady=(5, 5))
 
-        def tiempo_transcurrido(inicio_tiempo):
-            tiempo_actual = datetime.now()
-            tiempo_transcurrido = tiempo_actual - inicio_tiempo
-            segundos_transcurridos = tiempo_transcurrido.total_seconds()
-            minutos = int(segundos_transcurridos / 60)
-            segundos = int(segundos_transcurridos % 60)
-            return f"{minutos:02d}:{segundos:02d}"
+        pedido_label = tk.Label(nuevo_pedido_frame, text=f"Pedido # {pedido[0]}", cursor="hand2", background=color, font=("Gill Sans MT", 10, "bold"))
+        tiempo_label = tk.Label(nuevo_pedido_frame, text="00:00", background=color, font=("Gill Sans MT", 10, "bold"))
+        entregar_button = tk.Button(nuevo_pedido_frame, text="ENTREGAR", cursor="hand2", relief="flat", font=pedido_font)
+        modificar_button = tk.Button(nuevo_pedido_frame, text="MODIFICAR", cursor="hand2", relief="flat", font=pedido_font)
+        cancelar_button = tk.Button(nuevo_pedido_frame, text="CANCELAR", cursor="hand2", relief="flat", font=pedido_font)
+        imprimir_button = tk.Button(nuevo_pedido_frame, text="IMPRIMIR", cursor="hand2", relief="flat", font=pedido_font)
 
-        """def actualizar_tiempo():
-            tiempo_actual = tiempo_transcurrido(inicio_tiempo)
+        pedido_label.grid(row=row, column=0, padx=(0,20))
+        tiempo_label.grid(row=row, column=1, padx=(0,20))
+        entregar_button.grid(row=row, column=2, padx=(0,20))
+        modificar_button.grid(row=row, column=3, padx=(0,20))
+        cancelar_button.grid(row=row, column=4, padx=(0,20))
+        imprimir_button.grid(row=row, column=5)
+        row += 1
 
-            # Actualiza el tiempo para cada pedido en la lista de pedidos
-            for pedido in pedidos:
-                pedido['tiempo_label'].config(text=tiempo_transcurrido(pedido['inicio_tiempo']))
+        # Inicializa la actualización de tiempo para esta etiqueta de tiempo
+        actualizar_tiempo(ventana, tiempo_label, pedido[5])  # 5 es el índice de la columna de fecha de registro
 
-            principal.after(1000, actualizar_tiempo)
-
-        # Asegúrate de llamar a esta función después de agregar el primer pedido
-        actualizar_tiempo()"""
-
-
-
-        principal.mainloop()
+    

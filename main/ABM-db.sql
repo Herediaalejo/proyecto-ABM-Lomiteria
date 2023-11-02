@@ -1,12 +1,12 @@
 CREATE DATABASE IF NOT EXISTS Lomiteria;
 USE Lomiteria;
 
-CREATE TABLE TipoProducto (
+CREATE TABLE IF NOT EXISTS TipoProducto (
     ID_TIPO INT AUTO_INCREMENT PRIMARY KEY,
     Nombre VARCHAR(255) NOT NULL
 );
 
-CREATE TABLE Producto (
+CREATE TABLE IF NOT EXISTS Producto (
     ID_PRODUCTO INT AUTO_INCREMENT PRIMARY KEY,
     Nombre VARCHAR(255) NOT NULL,
     Descripcion VARCHAR(255),
@@ -15,14 +15,72 @@ CREATE TABLE Producto (
     FOREIGN KEY (ID_TIPO) REFERENCES TipoProducto (ID_TIPO)
 );
 
-CREATE TABLE Promocion (
+CREATE TABLE IF NOT EXISTS Promocion (
     ID_PROMOCION INT AUTO_INCREMENT PRIMARY KEY,
     ID_PRODUCTO INT NOT NULL,
     Precio DECIMAL(10, 2) NOT NULL,
     FOREIGN KEY (ID_PRODUCTO) REFERENCES Producto (ID_PRODUCTO)
 );
 
-CREATE TABLE Promocion2x1 (
+CREATE TABLE IF NOT EXISTS ModoConsumo (
+    id_modo_consumo INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(255) NOT NULL
+);
+
+INSERT INTO ModoConsumo (nombre) VALUES
+    ('Mesa'),
+    ('Fuera del local');
+
+
+CREATE TABLE IF NOT EXISTS TipoEntrada (
+    id_tipo_entrada INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(255) NOT NULL
+);
+
+INSERT INTO TipoEntrada (nombre) VALUES
+    ('Local'),
+    ('Teléfono'),
+    ('Whatsapp'),
+    ('Pedidos Ya'),
+    ('Rappi');
+
+CREATE TABLE IF NOT EXISTS TipoEntrega (
+    id_tipo_entrega INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(255) NOT NULL
+);
+
+INSERT INTO TipoEntrega (nombre) VALUES
+    ('Delivery'),
+    ('Retira en local');
+
+CREATE TABLE IF NOT EXISTS Pedido (
+    id_pedido INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_cliente VARCHAR(255),
+    descripcion VARCHAR(255),
+    total DECIMAL(10, 2) NOT NULL,
+    id_modo_consumo INT,
+    id_tipo_entrada INT,
+    id_tipo_entrega INT,
+    telefono VARCHAR(255),
+    direccion VARCHAR(255),
+    medio_pago VARCHAR(255),
+    entregado BOOLEAN DEFAULT 0,
+    fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,  -- Agregar la columna fecha_registro
+    FOREIGN KEY (id_modo_consumo) REFERENCES ModoConsumo(id_modo_consumo),
+    FOREIGN KEY (id_tipo_entrada) REFERENCES TipoEntrada(id_tipo_entrada),
+    FOREIGN KEY (id_tipo_entrega) REFERENCES TipoEntrega(id_tipo_entrega)
+);
+
+CREATE TABLE IF NOT EXISTS PedidoxProducto (
+    id_pedido INT,
+    id_producto INT,
+    cantidad_producto INT NOT NULL,
+    PRIMARY KEY (id_pedido, id_producto),
+    FOREIGN KEY (id_pedido) REFERENCES Pedido(id_pedido),
+    FOREIGN KEY (id_producto) REFERENCES Producto(id_producto)
+);
+
+CREATE TABLE IF NOT EXISTS Promocion2x1 (
     ID_PROMOCION2X1 INT AUTO_INCREMENT PRIMARY KEY,
     Nombre VARCHAR(255) NOT NULL,
     Producto1 INT NOT NULL,
